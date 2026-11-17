@@ -3,55 +3,383 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Laadplanner</title>
+<title>Laadplanner v3</title>
+ 
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#2563eb">
+ 
 <style>
-body{font-family:system-ui;max-width:420px;margin:auto;padding:16px}
-label{display:block;margin-top:12px;font-weight:600}
-input,select{width:100%;padding:12px;border:1px solid #ccc;border-radius:10px;box-sizing:border-box}
-button{width:100%;border:0;border-radius:10px;padding:14px;margin-top:12px;color:white;background:#2563eb;font-size:17px;font-weight:600}
-.secondary{background:#16a34a}.result{display:none;background:#eef4ff;padding:14px;border-radius:12px;margin-top:15px}.big{font-size:40px;font-weight:800;color:#2563eb}
+body{
+font-family:system-ui;
+max-width:420px;
+margin:auto;
+padding:16px;
+}
+ 
+label{
+display:block;
+margin-top:12px;
+font-weight:600;
+}
+ 
+input,select{
+width:100%;
+padding:12px;
+border:1px solid #ccc;
+border-radius:10px;
+box-sizing:border-box;
+}
+ 
+button{
+width:100%;
+border:none;
+border-radius:10px;
+padding:14px;
+margin-top:10px;
+color:white;
+background:#2563eb;
+font-size:17px;
+font-weight:600;
+}
+ 
+.green{
+background:#16a34a;
+}
+ 
+.red{
+background:#dc2626;
+}
+ 
+.result{
+margin-top:15px;
+padding:14px;
+background:#eef4ff;
+border-radius:12px;
+}
+ 
+.big{
+font-size:42px;
+font-weight:800;
+color:#2563eb;
+}
+ 
+.countdown{
+font-size:32px;
+font-weight:700;
+color:#dc2626;
+}
+ 
+.flash{
+animation: flash 0.6s infinite;
+}
+ 
+@keyframes flash{
+0% { background:white; }
+50% { background:#ff4444; }
+100% { background:white; }
+}
+ 
+.version{
+margin-top:20px;
+color:#888;
+text-align:center;
+font-size:12px;
+}
 </style>
-</head><body>
+</head>
+ 
+<body>
+ 
 <h2>🔋 Laadplanner</h2>
-<label>Auto</label><select id="car"><option value="mii">Seat Mii Electric</option><option value="tesla">Tesla Model 3 LR</option></select>
-<label>Huidige lading (%)</label><input id="cur" type="number" value="70">
-<label>Gewenste lading (%)</label><input id="tar" type="number" value="90">
-<label>Laadstroom (A)</label><input id="amp" type="number" value="8">
-<label>Laadverlies (%)</label><input id="loss" type="number" value="8">
+ 
+<label>Auto</label>
+<select id="car">
+<option value="mii">Seat Mii Electric</option>
+<option value="tesla">Tesla Model 3 LR</option>
+</select>
+ 
+<label>Huidige lading (%)</label>
+<input id="cur" type="number" value="70">
+ 
+<label>Gewenste lading (%)</label>
+<input id="tar" type="number" value="90">
+ 
+<label>Laadstroom (A)</label>
+<input id="amp" type="number" value="8">
+ 
+<label>Laadverlies (%)</label>
+<input id="loss" type="number" value="8">
+ 
 <div id="info"></div>
+ 
 <button id="calcBtn">Bereken</button>
-<div id="res" class="result"></div>
-<button id="timerBtn" class="secondary" style="display:none">⏱ Start Android timer</button>
+ 
+<button id="notifyBtn" class="green">
+🔔 Notificaties toestaan
+</button>
+ 
+<button id="clearBtn" class="red">
+🗑 Wis stoptijd
+</button>
+ 
+<div id="res" class="result" style="display:none"></div>
+ 
+<button id="stopAlarmBtn" class="green" style="display:none">
+🔕 Stop alarm
+</button>
+ 
+<div class="version">
+v3.0
+</div>
+ 
 <script>
-if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}
-const cars={mii:{cap:30.3,phases:2},tesla:{cap:75,phases:3}};
-const car=document.getElementById('car');
-const cur=document.getElementById('cur');
-const tar=document.getElementById('tar');
-const amp=document.getElementById('amp');
-const loss=document.getElementById('loss');
-const info=document.getElementById('info');
-const res=document.getElementById('res');
-const timerBtn=document.getElementById('timerBtn');
-let timerSeconds=0;
-function saveSettings(){localStorage.setItem('laadplanner',JSON.stringify({car:car.value,cur:cur.value,tar:tar.value,amp:amp.value,loss:loss.value}));}
-function loadSettings(){const s=localStorage.getItem('laadplanner'); if(!s)return; const d=JSON.parse(s); car.value=d.car||'mii'; cur.value=d.cur||70; tar.value=d.tar||90; amp.value=d.amp||8; loss.value=d.loss||8;}
-function updatePower(){const cfg=cars[car.value]; const power=(230*Number(amp.value)*cfg.phases)/1000; info.innerHTML='<br><strong>'+amp.value+'A → '+power.toFixed(2).replace('.',',')+' kW</strong>'; saveSettings();}
-loadSettings(); updatePower();
-[car,cur,tar,amp,loss].forEach(el=>el.addEventListener('input',updatePower));
-document.getElementById('calcBtn').addEventListener('click',function(){
-const cfg=cars[car.value]; const current=Number(cur.value); const target=Number(tar.value);
-if(target<=current){alert('Doelpercentage moet hoger zijn dan huidige lading.'); return;}
-const battery=((target-current)/100)*cfg.cap;
-const wall=battery/(1-Number(loss.value)/100);
-const power=(230*Number(amp.value)*cfg.phases)/1000;
-const hours=wall/power;
- timerSeconds=Math.round(hours*3600);
- const stop=new Date(Date.now()+timerSeconds*1000);
- res.style.display='block'; timerBtn.style.display='block';
- res.innerHTML='<div>STOP LADEN OM</div><div class="big">'+String(stop.getHours()).padStart(2,'0')+':'+String(stop.getMinutes()).padStart(2,'0')+'</div>';
+ 
+if("serviceWorker" in navigator){
+navigator.serviceWorker.register("sw.js");
+}
+ 
+const cars = {
+mii:{cap:30.3,phases:2},
+tesla:{cap:75,phases:3}
+};
+ 
+const car = document.getElementById("car");
+const cur = document.getElementById("cur");
+const tar = document.getElementById("tar");
+const amp = document.getElementById("amp");
+const loss = document.getElementById("loss");
+const info = document.getElementById("info");
+const res = document.getElementById("res");
+ 
+let alarmInterval = null;
+let audioCtx = null;
+ 
+function saveSettings(){
+localStorage.setItem("settings",
+JSON.stringify({
+car:car.value,
+cur:cur.value,
+tar:tar.value,
+amp:amp.value,
+loss:loss.value
+}));
+}
+ 
+function loadSettings(){
+ 
+const s=localStorage.getItem("settings");
+ 
+if(!s) return;
+ 
+const d=JSON.parse(s);
+ 
+car.value=d.car;
+cur.value=d.cur;
+tar.value=d.tar;
+amp.value=d.amp;
+loss.value=d.loss;
+}
+ 
+function updatePower(){
+ 
+const cfg=cars[car.value];
+ 
+const power=
+(230 * Number(amp.value) * cfg.phases)/1000;
+ 
+info.innerHTML=
+"<br><strong>"+
+amp.value+
+"A → "+
+power.toFixed(2).replace(".",",")+
+" kW</strong>";
+ 
+saveSettings();
+}
+ 
+loadSettings();
+updatePower();
+ 
+[car,cur,tar,amp,loss].forEach(
+el => el.addEventListener("input",updatePower)
+);
+ 
+document.getElementById("notifyBtn")
+.addEventListener("click", async ()=>{
+ 
+if(Notification.permission !== "granted"){
+await Notification.requestPermission();
+}
+ 
+alert("Notificaties ingesteld");
 });
-timerBtn.addEventListener('click',function(){window.location.href='intent:#Intent;action=android.intent.action.SET_TIMER;i.length='+timerSeconds+';S.message=Laadpaal stoppen;end';});
-</script></body></html>
+ 
+document.getElementById("calcBtn")
+.addEventListener("click",()=>{
+ 
+const cfg=cars[car.value];
+ 
+const battery =
+((Number(tar.value)-Number(cur.value))/100)
+* cfg.cap;
+ 
+if(battery <= 0){
+alert("Doelpercentage moet hoger zijn");
+return;
+}
+ 
+const wall =
+battery/(1-Number(loss.value)/100);
+ 
+const power =
+(230*Number(amp.value)*cfg.phases)/1000;
+ 
+const hours = wall/power;
+ 
+const stopTime =
+Date.now() + (hours*3600*1000);
+ 
+localStorage.setItem(
+"stopTime",
+stopTime
+);
+ 
+renderCountdown();
+});
+ 
+document.getElementById("clearBtn")
+.addEventListener("click",()=>{
+ 
+localStorage.removeItem("stopTime");
+ 
+location.reload();
+});
+ 
+function renderCountdown(){
+ 
+const stopTime =
+Number(localStorage.getItem("stopTime"));
+ 
+if(!stopTime) return;
+ 
+res.style.display="block";
+ 
+updateCountdown();
+ 
+setInterval(updateCountdown,1000);
+}
+ 
+function updateCountdown(){
+ 
+const stopTime =
+Number(localStorage.getItem("stopTime"));
+ 
+const diff =
+stopTime - Date.now();
+ 
+const stopDate =
+new Date(stopTime);
+ 
+const hh =
+String(stopDate.getHours())
+.padStart(2,"0");
+ 
+const mm =
+String(stopDate.getMinutes())
+.padStart(2,"0");
+ 
+if(diff <= 0){
+ 
+triggerAlarm();
+ 
+return;
+}
+ 
+const h =
+Math.floor(diff/3600000);
+ 
+const m =
+Math.floor((diff%3600000)/60000);
+ 
+const s =
+Math.floor((diff%60000)/1000);
+ 
+res.innerHTML=
+"<div>STOP LADEN OM</div>"+
+"<div class='big'>"+hh+":"+mm+"</div>"+
+"<hr>"+
+"<div>Nog:</div>"+
+"<div class='countdown'>"+
+String(h).padStart(2,"0")+":"+
+String(m).padStart(2,"0")+":"+
+String(s).padStart(2,"0")+
+"</div>";
+}
+ 
+function triggerAlarm(){
+ 
+if(alarmInterval) return;
+ 
+document.body.classList.add("flash");
+ 
+document.getElementById("stopAlarmBtn")
+.style.display="block";
+ 
+if(Notification.permission === "granted"){
+ 
+new Notification(
+"🔋 Tijd om laden te stoppen"
+);
+}
+ 
+audioCtx =
+new(window.AudioContext ||
+window.webkitAudioContext)();
+ 
+alarmInterval =
+setInterval(()=>{
+ 
+const oscillator =
+audioCtx.createOscillator();
+ 
+const gain =
+audioCtx.createGain();
+ 
+oscillator.connect(gain);
+gain.connect(audioCtx.destination);
+ 
+oscillator.frequency.value = 900;
+ 
+oscillator.start();
+ 
+gain.gain.setValueAtTime(
+0.1,
+audioCtx.currentTime
+);
+ 
+oscillator.stop(
+audioCtx.currentTime + 0.35
+);
+ 
+},1000);
+}
+ 
+document.getElementById("stopAlarmBtn")
+.addEventListener("click",()=>{
+ 
+clearInterval(alarmInterval);
+ 
+alarmInterval=null;
+ 
+document.body.classList.remove("flash");
+ 
+document.getElementById("stopAlarmBtn")
+.style.display="none";
+});
+ 
+renderCountdown();
+ 
+</script>
+ 
+</body>
+</html>
