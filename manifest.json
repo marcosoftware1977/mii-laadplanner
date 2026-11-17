@@ -1,1 +1,1 @@
-{"name":"Laadplanner v4","short_name":"Laadplanner","start_url":"./?v=400","display":"standalone","theme_color":"#2563eb","background_color":"#ffffff","icons":[{"src":"icon-192.png","sizes":"192x192","type":"image/png"},{"src":"icon-512.png","sizes":"512x512","type":"image/png"}]}
+{"name":"Mii Tesla Laadplanner","short_name":"Laadplanner","start_url":"./","display":"standalone","theme_color":"#2563eb","background_color":"#ffffff","icons":[{"src":"icon-192.png","sizes":"192x192","type":"image/png"},{"src":"icon-512.png","sizes":"512x512","type":"image/png"}]}
